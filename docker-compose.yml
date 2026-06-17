@@ -1,0 +1,59 @@
+services:
+  calibre-web-automated:
+    image: crocodilestick/calibre-web-automated:v4.0.6 #go find latest version to pin to
+    container_name: calibre-web-automated
+    networks:
+      - frontend # traefik network if using 
+    environment:
+      # Only change these if you know what you're doing
+      - PUID=1000
+      - PGID=1000
+      # Edit to match your current timezone https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+      - TZ=UTC
+      # Hardcover API Key required for Hardcover as a Metadata Provider, get one here: https://docs.hardcover.app/api/getting-started/
+      - HARDCOVER_TOKEN=${HARDCOVER_TOKEN}
+      # If your library is on a network share (e.g., NFS/SMB), disable WAL to reduce locking issues
+      # Accepts: true/false (default: false)
+      - NETWORK_SHARE_MODE=false
+      # Override the default port (8083) for the web server.
+      # Accepts any valid port number.
+      - CWA_PORT_OVERRIDE=8083
+   # labels: # Uncomment if using traefik and update to reflect your environment
+    #  - traefik.enable=true
+    #  - traefik.http.routers.calibre-web-automated.tls=true
+    #  - traefik.http.routers.calibre-web-automated.tls.certresolver=cloudflare
+    #  - traefik.http.routers.calibre-web-automated.entrypoints=websecure
+    #  - traefik.http.routers.calibre-web-automated.service=calibre-web-automated
+    #  - traefik.http.services.calibre-web-automated.loadbalancer.server.port=8083
+    #  - traefik.http.routers.calibre-web-automated.rule=Host(`yourdomain.com`) # enter your host url
+    #  - traefik.docker.network=frontend
+    volumes:
+      # CW users migrating should stop their existing CW instance, make a copy of the config folder, and bind that here to carry over all of their user settings ect.
+      - calibre-web:/config
+      # This is an ingest dir, NOT a library one. Anything added here will be automatically added to your library according to the settings you have configured in CWA Settings page. All files placed here are REMOVED AFTER PROCESSING
+      - uploads:/cwa-book-ingest
+      # If you don't have an existing library, CWA will automatically create one at the bind provided here
+      - ebooks:/calibre-library
+    restart: unless-stopped
+volumes:
+   ebooks:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /path/to/the/directory/books
+   calibre-web:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /path/to/the/directory/config
+   uploads:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /path/to/the/directory/uploads
+networks:
+  frontend:
+    external: true
